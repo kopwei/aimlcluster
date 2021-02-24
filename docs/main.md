@@ -45,7 +45,7 @@ We choose Ubuntu 20.04 server Focal LTS as the base operating system since it is
 
 ### Necessary software installation
 
-Following software are crucial for composing a Kubernetes cluster and make use of the CUDA hardware.
+Following software are crucial for composing a Kubernetes cluster and make use of the CUDA hardware. Thus, you need to install all the software mentioned below on every single workstation.
 
 - openssh-server
 
@@ -150,12 +150,106 @@ We need to deploy necessary services into the vanila Kubernetes cluster to suppo
 
 #### Install Helm on your laptop
 
-In order to use Helm, we should install it on our client laptop following [Helm installation ]
+In order to use Helm, we should install it on our client laptop following [Helm installation guide](https://helm.sh/docs/intro/install/).
 
 #### Deploy MetalLB
 
-[Metallb](https://metallb.universe.tf/) is a simple tool which provide LoadBalancer capability to the K8s cluster and provide single entry IP for multiple services. This simplifies the external routing.
+[Metallb](https://metallb.universe.tf/) is a simple tool which provide LoadBalancer capability to the K8s cluster and provide single entry IP for multiple services. This simplifies the external routing. Remember to replace the **start-ip-address** and **end-ip-address** to the address in you local LAN. E.g. if your local LAN is 192.168.11.0/24, you can pick 192.168.11.100 as start-ip-address and 192.168.11.120 as end-ip-address. N.B. Make sure you DHCP server won't assign IP address within this range to avoid potential collision.
+
+```bash
+helm repo add stable https://charts.helm.sh/stable
+helm repo update
+kubectl create namespace metallb
+helm install metallb stable/metallb --namespace metallb \
+  --set configInline.address-pools[0].name=default \
+  --set configInline.address-pools[0].protocol=layer2 \
+  --set configInline.address-pools[0].addresses[0]=<start-ip-address>-<end-ip-address>
+```
+
+#### Deploy cert-manager
+
+[Cert-Manager](https://cert-manager.io/) is the tool to help us get/store/manage TLS certificate from [Letsencrypt](https://letsencrypt.org/) easily.
+
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+kubectl create namespace cert-manager
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --version v1.2.0 \
+  --create-namespace \
+  -set installCRDs=true
+```
+
+#### Deploy nginx-ingress-controller
+
+[Nginx-Ingress-Controller](https://www.nginx.com/products/nginx-ingress-controller/) is the tool helping us to route http/https traffic to correct service.
+
+```bash
+kubectl create namespace ingress-controller
+helm install nginx-ingress stable/nginx-ingress \
+  --namespace ingress-controller
+```
 
 #### Deploy Rancher
 
-[Rancher](https://rancher.com/products/rancher/) is a very nice tool to visualise and manage the cluster.
+[Rancher](https://rancher.com/products/rancher/) is a very nice tool to visualise and manage the cluster. The reference doc is [Install Rancher on Kubernetes Cluster](https://rancher.com/docs/rancher/v2.x/en/installation/k8s-install/helm-rancher/). Remember to change **EMAIL_ADDR** to a valid email address
+
+```bash
+kubectl create namespace cattle-system
+helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --set hostname=<HOST_NAME> \
+  --set ingress.tls.source=letsEncrypt \
+  --set letsEncrypt.email=<EMAIL_ADDR>
+```
+
+After Rancher is installed, we could check if Rancher is accessible from WAN and LAN.
+
+![rancher-login](https://user-images.githubusercontent.com/944672/81685208-2f4f9900-9458-11ea-8e03-6aab82e399b9.png)
+
+The cluster is shown in below pic.
+
+![K3s Local Cluster](https://user-images.githubusercontent.com/944672/82371075-e0869e00-9a19-11ea-8ecd-0c8516faaa56.png)
+
+#### Prepare cluster-issuer for further deployment
+
+In order to make use of cert-managet to other services, create cluster-issuer as below. Remember to change **EMAIL** to a valid email address.
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    email: <EMAIL>
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+
+cat <<EOF | kubectl apply -f -
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    email: <EMAIL>
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+```
