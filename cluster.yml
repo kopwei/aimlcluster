@@ -1,0 +1,23 @@
+nodes:
+  - address: 192.168.122.200
+    user: wei
+    role:
+      - controlplane
+      - etcd
+      - worker
+  - address: 192.168.122.74
+    user: wei
+    role:
+      - controlplane
+      - etcd
+      - worker
+  - address: 192.168.122.85
+    user: wei
+    role:
+      - etcd
+      - worker
+
+# If set to true, RKE will not fail when unsupported Docker version
+# # are found
+ignore_docker_version: true
+
