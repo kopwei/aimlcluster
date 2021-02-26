@@ -145,6 +145,7 @@ We'll use a simple program named [RKE](https://rancher.com/products/rke/) to dep
 - Step 3. Install the Kubernetes with following command.
   
   ```bash
+  # The command could take a couple of minutes. please be patient.
   rke up
   ```
 
@@ -263,4 +264,39 @@ spec:
         ingress:
           class: nginx
 EOF
+```
+
+## Platform setup
+
+The ML/AL platform is based on [JupyterHub](https://jupyter.org/hub) which allow a single point of access and allocate hardware resources for every user. To install JupyterHub on Kubernetes cluster, we use [JupyterHub for Kubernetes](https://zero-to-jupyterhub.readthedocs.io/) doc as reference and created our own config.yaml file.
+
+### Installation of JupyterHub
+
+JupyterHub installation/upgrade is quite simple following [How to install JupyterHub via Helm](https://zero-to-jupyterhub.readthedocs.io/en/stable/jupyterhub/installation.html).
+
+```bash
+helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
+helm repo update
+helm upgrade  --install jhub jupyterhub/jupyterhub  \
+  --namespace jhub   --create-namespace  \
+  --values config.yaml
+```
+
+### Detailed configuration of JupyterHub
+
+**config.yaml** is the key file which used to configure JupyterHub. Here we'll explain the parts that we defined.
+
+#### LDAP configuration
+
+To allow JupyterHub communicate with LDAP service and use it for authentication, in the example, we placed the following configuration to let it talk to the LDAP server running on Synology NAS.
+
+```yaml
+hub:
+  config:
+    JupyterHub:
+      authenticator_class: ldapauthenticator.LDAPAuthenticator
+    LDAPAuthenticator:
+      bind_dn_template:
+        - uid={username},cn=<CN>,dc=<DC>,dc=<DC>
+      server_address: <LDAP_SERVER_IP>
 ```
