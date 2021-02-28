@@ -266,6 +266,23 @@ spec:
 EOF
 ```
 
+### Deploy Storage Driver
+
+We use Longhorn and SMB as the storage drivers. Here is the installation instruction.
+
+#### Install Longhorn
+
+We use Rancher to install Longhorn storage driver and set it as default. We followed the [Longhorn installation instruction](https://longhorn.io/docs/1.0.0/deploy/install/install-with-rancher/)
+
+#### Install SMB storage driver
+
+We install SMB storage driver in order to let pods connected to remote SMB shared storage on Synology NAS. We followed the [instruction](https://github.com/kubernetes-csi/csi-driver-smb/blob/master/charts/README.md).
+
+```bash
+helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts
+helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system
+```
+
 ## Platform setup
 
 The ML/AL platform is based on [JupyterHub](https://jupyter.org/hub) which allow a single point of access and allocate hardware resources for every user. To install JupyterHub on Kubernetes cluster, we use [JupyterHub for Kubernetes](https://zero-to-jupyterhub.readthedocs.io/) doc as reference and created our own config.yaml file.
