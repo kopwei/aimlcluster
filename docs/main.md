@@ -96,7 +96,7 @@ Following software are crucial for composing a Kubernetes cluster and make use o
     "storage-driver": "overlay2",
     "default-runtime": "nvidia",
     "features": {
-    "buildkit": true
+      "buildkit": true
     },
     "runtimes": {
       "nvidia": {
@@ -178,22 +178,6 @@ helm install metallb stable/metallb --namespace metallb \
   --set configInline.address-pools[0].addresses[0]=<start-ip-address>-<end-ip-address>
 ```
 
-#### Deploy cert-manager
-
-[Cert-Manager](https://cert-manager.io/) is the tool to help us get/store/manage TLS certificate from [Letsencrypt](https://letsencrypt.org/) easily.
-
-```bash
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-kubectl create namespace cert-manager
-helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --version v1.2.0 \
-  --create-namespace \
-  -set installCRDs=true
-```
-
 #### Deploy nginx-ingress-controller
 
 [Nginx-Ingress-Controller](https://www.nginx.com/products/nginx-ingress-controller/) is the tool helping us to route http/https traffic to correct service.
@@ -206,16 +190,16 @@ helm install nginx-ingress stable/nginx-ingress \
 
 #### Deploy Rancher
 
-[Rancher](https://rancher.com/products/rancher/) is a very nice tool to visualise and manage the cluster. The reference doc is [Install Rancher on Kubernetes Cluster](https://rancher.com/docs/rancher/v2.x/en/installation/k8s-install/helm-rancher/). Remember to change **EMAIL_ADDR** to a valid email address
+[Rancher](https://rancher.com/products/rancher/) is a very nice tool to visualise and manage the cluster. The reference doc is [Install Rancher on Kubernetes Cluster](https://rancher.com/docs/rancher/v2.x/en/installation/k8s-install/helm-rancher/). Remember to change **EMAIL_ADDR** to a valid email address. You can ignore last 2 lines in the cmd if you won't expose Rancher to Internet.
 
 ```bash
 kubectl create namespace cattle-system
 helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
 helm install rancher rancher-latest/rancher \
   --namespace cattle-system \
-  --set hostname=<HOST_NAME> \
-  --set ingress.tls.source=letsEncrypt \
-  --set letsEncrypt.email=<EMAIL_ADDR>
+  --set hostname=<HOST_NAME> # \
+  ## --set ingress.tls.source=letsEncrypt \
+  ## --set letsEncrypt.email=<EMAIL_ADDR>
 ```
 
 After Rancher is installed, we could check if Rancher is accessible from WAN and LAN.
@@ -226,7 +210,21 @@ The cluster is shown in below pic.
 
 ![K3s Local Cluster](https://user-images.githubusercontent.com/944672/82371075-e0869e00-9a19-11ea-8ecd-0c8516faaa56.png)
 
-#### Prepare cluster-issuer for further deployment
+#### Deploy cert-manager and cluster-issuer for further deployment [Optional]
+
+[Cert-Manager](https://cert-manager.io/) is the tool to help us get/store/manage TLS certificate from [Letsencrypt](https://letsencrypt.org/) easily. You may ignore this step if you won't expose your application to Internet.
+
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+kubectl create namespace cert-manager
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --version v1.2.0 \
+  --create-namespace \
+  -set installCRDs=true
+```
 
 In order to make use of cert-managet to other services, create cluster-issuer as below. Remember to change **EMAIL** to a valid email address.
 
